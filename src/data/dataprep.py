@@ -1,5 +1,6 @@
 from typing import Optional, Union
 import pandas as pd
+import torch
 
 
 def transform_indices(data: pd.DataFrame, users: str, items:str, inplace: bool=False):
@@ -301,3 +302,61 @@ def filter_core_records(
     data = data.drop(columns=["item_count", "user_count"])
     
     return data
+
+def temporal_train_test_split(
+    df: pd.DataFrame,
+    test_last_seconds: float,
+    time_column: str = "timestamp",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+
+    return df[df[time_column] < df[time_column].max() - test_last_seconds], df[df[time_column] >= df[time_column].max() - test_last_seconds]
+
+
+def create_masked_tensor(data: torch.Tensor, lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Converts a batch of flattened variable-length sequences into a padded tensor and mask.
+    Supports:
+        - indices: data shape (total_num_elements,)
+        - embeddings/features: data shape (total_num_elements, d1, d2, ...)
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        Input tensor containing flattened sequences:
+        - For indices: shape (total_num_elements,)
+        - For embeddings: shape (total_num_elements, embedding_dim)
+    lengths : torch.Tensor
+        1D tensor of sequence lengths, shape (batch_size,). Specifies the actual length
+        of each sequence.
+
+    Returns
+    -------
+    Tuple[torch.Tensor, torch.Tensor]
+        - padded_tensor: Padded tensor of shape:
+            - (batch_size, max_seq_len) for indices
+            - (batch_size, max_seq_len, embedding_dim) for embeddings
+            Shorter sequences are right-padded with zeros.
+        - mask: Boolean mask of shape (batch_size, max_seq_len) where True indicates
+            valid elements and False indicates padding. Can be used in attention or loss computation.
+
+    Examples
+    --------
+    >>> data = torch.tensor([1, 2, 3, 4, 5, 6])  # sequences: [1,2], [3,4,5], [6]
+    >>> lengths = torch.tensor([2, 3, 1])
+    >>> padded, mask = create_masked_tensor(data, lengths)
+    >>> padded
+    tensor([[1, 2, 0],
+            [3, 4, 5],
+            [6, 0, 0]])
+    >>> mask
+    tensor([[ True,  True, False],
+            [ True,  True,  True],
+            [ True, False, False]])
+    """
+
+    padded = torch.zeros((len(lengths), lengths.max()) + tuple(data.shape[1:]), dtype=data.dtype, device=data.device)
+
+    mask = (torch.arange(lengths.max(), device=lengths.device).expand(len(lengths), lengths.max()) < lengths.unsqueeze(1))
+    padded.masked_scatter_(mask.reshape(mask.shape + (1,) * len(data.shape[1:])).expand_as(padded), data)
+
+    return padded, mask
