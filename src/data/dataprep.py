@@ -1,4 +1,3 @@
-from typing import Optional, Union
 import pandas as pd
 
 
@@ -70,7 +69,7 @@ def to_numeric_id(data: pd.DataFrame, field: str):
 def reindex_data(
         data: pd.DataFrame,
         data_index: dict,
-        entities: Optional[Union[str, list[str]]] = None,
+        entities: str | list[str] | None = None,
         filter_invalid: bool = True,
         inplace: bool = False
     ):
@@ -106,7 +105,7 @@ def reindex_data(
 def verify_time_split(
         before: pd.DataFrame,
         after: pd.DataFrame,
-        target_field: str='userid',
+        target_field: str='user_id',
         timeid: str='timestamp'
     ):
     '''
@@ -126,7 +125,7 @@ def verify_time_split(
 def temporal_split(
         data: pd.DataFrame,
         split_column: str,
-        split_value: Union[int, float, str],
+        split_value: int | float | str,
         comparison: str = 'less'
     ):
     '''
@@ -179,6 +178,34 @@ def temporal_split(
         raise ValueError(f"comparison must be 'less' or 'greater', got '{comparison}'")
     
     return before, after
+
+
+def temporal_train_test_split(
+        data: pd.DataFrame,
+        timeid: str = 'timestamp',
+        test_last_seconds: int | float | None = None,
+        split_timestamp: int | float | None = None,
+        gap_seconds: float = 0
+    )  -> tuple[pd.DataFrame, pd.DataFrame]:
+
+    if gap_seconds < 0:
+        raise ValueError("gap_seconds must be non-negative")
+
+    if split_timestamp is None:
+        if test_last_seconds is None:
+            raise ValueError(
+                "Either split_timestamp or test_last_seconds must be provided"
+            )
+        split_timestamp = data[timeid].max() - test_last_seconds
+
+    train, _ = temporal_split(
+        data,
+        split_column=timeid,
+        split_value=split_timestamp - gap_seconds,
+        comparison='less',
+    )
+    test = data[data[timeid] >= split_timestamp].copy()
+    return train, test
 
 
 def remove_users_without_train_events(
