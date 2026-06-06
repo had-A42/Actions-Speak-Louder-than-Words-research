@@ -1,0 +1,9 @@
+numpy
+pandas
+scipy
+torch
+tqdm
+matplotlib
+numba
+requests
+git+https://github.com/evfro/polara.git#egg=polara
