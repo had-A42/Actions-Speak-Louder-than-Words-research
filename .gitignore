@@ -1,1 +1,3 @@
-ml-20m.zip
+*.zip
+*.gz
+*.parquet

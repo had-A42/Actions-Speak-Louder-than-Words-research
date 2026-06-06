@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 import pandas as pd
 import torch
 
@@ -107,7 +107,7 @@ def reindex_data(
 def verify_time_split(
         before: pd.DataFrame,
         after: pd.DataFrame,
-        target_field: str='userid',
+        target_field: str='user_id',
         timeid: str='timestamp'
     ):
     '''
@@ -307,9 +307,13 @@ def temporal_train_test_split(
     df: pd.DataFrame,
     test_last_seconds: float,
     time_column: str = "timestamp",
+    gap_seconds: float = 0,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-
-    return df[df[time_column] < df[time_column].max() - test_last_seconds], df[df[time_column] >= df[time_column].max() - test_last_seconds]
+    
+    split_ts = df[time_column].max() - test_last_seconds
+    train = df[df[time_column] < split_ts - gap_seconds]
+    test = df[df[time_column] >= split_ts]
+    return train, test
 
 
 def create_masked_tensor(data: torch.Tensor, lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

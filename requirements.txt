@@ -6,4 +6,5 @@ tqdm
 matplotlib
 numba
 requests
+pyarrow
 git+https://github.com/evfro/polara.git#egg=polara
