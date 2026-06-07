@@ -1,7 +1,7 @@
 from typing import Dict
 import pandas as pd
 from polara import get_movielens_data
-from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split
+from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split, filter_core_records
 
 
 
@@ -21,12 +21,22 @@ def load_yambda(interactions_path: str, config: Dict) -> pd.DataFrame:
 def load_amzn_books(interactions_path: str, config: Dict) -> pd.DataFrame:
     df = pd.read_csv(interactions_path)
     df = df.rename(columns=config["col_mapping"])
+
+    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
+
+    df = filter_core_records(
+            df,
+            user_id_column="user_id",
+            item_id_column="item_id",
+            min_user_interactions=5,
+            min_item_interactions=5
+        )
+
     return df
 
 
-
 def split_and_reindex(df: pd.DataFrame, config: Dict):
-    train_, test_ = temporal_train_test_split(df, test_last_seconds=df['timestamp'].max() - df['timestamp'].quantile(1 - config["test_quantile"]), gap_seconds=15 * 60)
+    train_, test_ = temporal_train_test_split(df, test_last_seconds=df['timestamp'].max() - df['timestamp'].quantile(1 - config["test_quantile"]), gap_seconds=15*60)
     
     train, data_index = transform_indices(train_, users='user_id', items='item_id')
     test = reindex_data(test_, data_index, entities=['users', 'items'], filter_invalid=True)
