@@ -1,7 +1,7 @@
 from typing import Dict
 import pandas as pd
 from polara import get_movielens_data
-from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split
+from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split, filter_core_records
 from huggingface_hub import hf_hub_download
 
 
