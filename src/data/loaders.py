@@ -1,7 +1,7 @@
 from typing import Dict
 import pandas as pd
 from polara import get_movielens_data
-from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split
+from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split, filter_core_records
 from huggingface_hub import hf_hub_download
 
 
@@ -22,6 +22,17 @@ def load_yambda(interactions_path: str, config: Dict) -> pd.DataFrame:
 def load_amzn_books(interactions_path: str, config: Dict) -> pd.DataFrame:
     df = pd.read_csv(interactions_path)
     df = df.rename(columns=config["col_mapping"])
+
+    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
+
+    df = filter_core_records(
+            df,
+            user_id_column="user_id",
+            item_id_column="item_id",
+            min_user_interactions=5,
+            min_item_interactions=5
+        )
+
     return df
 
 def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame:
