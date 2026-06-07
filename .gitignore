@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+*.zip
+*.gz
+*.parquet
+
+*.zip
+*.gz
+*.parquet
