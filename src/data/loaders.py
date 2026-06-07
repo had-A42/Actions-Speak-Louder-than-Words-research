@@ -42,6 +42,24 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
         filename="listens.parquet",
     )
     df = pd.read_parquet(path).rename(columns=config["col_mapping"])
+
+    artist_path = config.get("artist_mapping_path") or hf_hub_download(
+        repo_id="yandex/yambda",
+        repo_type="dataset",
+        filename="artist_item_mapping.parquet",
+    )
+
+    artists = pd.read_parquet(artist_path, columns=["item_id", "artist_id"])
+
+    artists = (
+        artists
+        .sort_values(["item_id", "artist_id"])
+        .drop_duplicates("item_id")
+    )
+
+    df = df.merge(artists, on="item_id", how="left")
+    df["artist_id"] = df["artist_id"].fillna(-1).astype("int64")
+
     df["feedback"] = 1
     df["action_code"] = df["is_like"].astype("int8") + 2 * df["is_full_play"].astype("int8")
     return df
