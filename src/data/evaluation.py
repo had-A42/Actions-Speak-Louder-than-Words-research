@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
+
 def get_metrics(targets: List[int], candidates: List[int], topk: int) -> Dict[str, float]:
     candidates = np.asarray(candidates[:topk])
     targets = np.asarray(targets)
@@ -33,22 +34,22 @@ def evaluate(
     metrics_sum = [0, 0, 0]
     items = set()
 
-    for uid, targets in targets.items():
+    for uid, user_targets in targets.items():
         items.update(candidates[uid])
-
-        um = get_metrics(targets, candidates[uid], topk)
+        
+        um = get_metrics(user_targets, candidates[uid], topk)
         for k, v in enumerate(um.values()):
             metrics_sum[k] += v
 
     metrics = defaultdict(float,
-     {'hitrate': metrics_sum[0] / len(candidates),
-      'recall': metrics_sum[1] / len(candidates),
-      'ndcg': metrics_sum[2] / len(candidates),
-      'coverage': len(items) / catalog_size})
+        {'hitrate': metrics_sum[0] / len(candidates),
+        'recall': metrics_sum[1] / len(candidates),
+        'ndcg': metrics_sum[2] / len(candidates),
+        'coverage': len(items) / catalog_size})
 
     return metrics
 
-def eval(
+def evaluate_model(
     dataloader: DataLoader,
     model: torch.nn.Module,
     catalog_size: int,
