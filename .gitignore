@@ -224,3 +224,5 @@ __marimo__/
 *.zip
 *.gz
 *.parquet
+
+.DS_Store

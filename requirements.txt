@@ -7,4 +7,5 @@ matplotlib
 numba
 requests
 pyarrow
+huggingface_hub
 git+https://github.com/evfro/polara.git#egg=polara
