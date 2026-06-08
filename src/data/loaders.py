@@ -16,6 +16,15 @@ def load_yambda(interactions_path: str, config: Dict) -> pd.DataFrame:
     df = pd.read_parquet(interactions_path, columns=list(config["col_mapping"].keys()))
     df = df.rename(columns=config["col_mapping"])
     df["feedback"] = 1
+
+    df = filter_core_records(
+            df,
+            user_id_column="user_id",
+            item_id_column="item_id",
+            min_user_interactions=5,
+            min_item_interactions=5
+        )
+
     return df
 
 
