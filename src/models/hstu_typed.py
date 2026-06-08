@@ -168,7 +168,6 @@ class TypedHSTUEncoder(nn.Module):
                     linear_dim=linear_dim,
                     attention_dim=attention_dim,
                     num_heads=num_heads,
-                    linear_activation="silu",
                     dropout_rate=linear_dropout_rate,
                     attn_dropout_rate=attn_dropout_rate,
                     concat_ua=concat_ua,

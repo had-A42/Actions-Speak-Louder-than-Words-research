@@ -100,7 +100,6 @@ class HSTUBlock(nn.Module):
         linear_dim: int,
         attention_dim: int,
         num_heads: int = 1,
-        linear_activation: Literal["silu", "none"] = "silu",
         dropout_rate: float = 0.0,
         attn_dropout_rate: float = 0.0,
         concat_ua: bool = False,
@@ -119,7 +118,6 @@ class HSTUBlock(nn.Module):
         self.linear_dim = linear_dim
         self.attention_dim = attention_dim
         self.num_heads = num_heads
-        self.linear_activation = linear_activation
         self.dropout_rate = dropout_rate
         self.attn_dropout_rate = attn_dropout_rate
         self.concat_ua = concat_ua
@@ -162,10 +160,8 @@ class HSTUBlock(nn.Module):
 
         normed_x = self.input_norm(x)
         projected = self.uvqk(normed_x)
-        if self.linear_activation == "silu":
-            projected = F.silu(projected)
-        elif self.linear_activation != "none":
-            raise ValueError(f"Unknown linear_activation {self.linear_activation}")
+        projected = F.silu(projected)
+       
 
         split_sizes = [
             self.linear_dim * self.num_heads,
@@ -266,7 +262,6 @@ class HSTUEncoder(nn.Module):
                     linear_dim=linear_dim,
                     attention_dim=attention_dim,
                     num_heads=num_heads,
-                    linear_activation="silu",
                     dropout_rate=linear_dropout_rate,
                     attn_dropout_rate=attn_dropout_rate,
                     concat_ua=concat_ua,

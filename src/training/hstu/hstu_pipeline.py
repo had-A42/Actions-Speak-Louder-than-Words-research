@@ -39,7 +39,7 @@ class HSTUExperimentConfig:
     input_dropout_rate: float = 0.5
     linear_dropout_rate: float = 0.5
     attn_dropout_rate: float = 0.0
-    enable_relative_attention_bias: bool = True
+    enable_relative_attention_bias: bool = False
     relative_attention_num_buckets: int = 128
     item_id_offset: int = 1
     filter_seen: bool = True
@@ -104,9 +104,30 @@ def train_hstu(
     device: str | torch.device,
     grad_clip_norm: Optional[float] = None,
     show_progress: bool = True,
-) -> List[float]:
+    eval_loader: Optional[DataLoader] = None,
+    targets: Optional[Dict[int, List[int]]] = None,
+    catalog_size: Optional[int] = None,
+    topk: Optional[int] = None,
+    filter_seen: bool = True,
+) -> List[float] | Tuple[List[float], List[Dict[str, float]]]:
     model.to(device)
-    losses: List[float] = []
+    losses = []
+    eval_metrics_history: List[Dict[str, float]] = []
+
+    eval_requested = any(
+        value is not None
+        for value in (eval_loader, targets, catalog_size, topk)
+    )
+    if eval_requested and (
+        eval_loader is None
+        or targets is None
+        or catalog_size is None
+        or topk is None
+    ):
+        raise ValueError(
+            "eval_loader, targets, catalog_size, and topk must all be provided "
+            "to evaluate after each epoch"
+        )
 
     for epoch in range(num_epochs):
         model.train()
@@ -136,6 +157,30 @@ def train_hstu(
         avg_loss = epoch_loss / max(epoch_examples, 1)
         losses.append(avg_loss)
 
+        if eval_requested:
+            metrics, _ = evaluate_hstu(
+                model=model,
+                eval_loader=eval_loader,
+                targets=targets,
+                catalog_size=catalog_size,
+                topk=topk,
+                device=device,
+                filter_seen=filter_seen,
+                show_progress=show_progress,
+            )
+            eval_metrics_history.append(metrics)
+            if show_progress:
+                metrics_str = ", ".join(
+                    f"{metric}={value:.4f}"
+                    for metric, value in sorted(metrics.items())
+                )
+                tqdm.write(
+                    f"epoch {epoch + 1}/{num_epochs}: "
+                    f"loss={avg_loss:.4f}, {metrics_str}"
+                )
+
+    if eval_requested:
+        return losses, eval_metrics_history
     return losses
 
 
