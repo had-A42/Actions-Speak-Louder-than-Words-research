@@ -9,4 +9,5 @@ requests
 pyarrow
 huggingface_hub
 ipywidgets
+implicit
 git+https://github.com/evfro/polara.git#egg=polara
