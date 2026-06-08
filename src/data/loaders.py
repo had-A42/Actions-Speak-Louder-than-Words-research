@@ -1,7 +1,8 @@
 from typing import Dict
 import pandas as pd
 from polara import get_movielens_data
-from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split, filter_core_records
+from src.data.dataprep import transform_indices, verify_time_split, reindex_data, temporal_train_test_split
+from huggingface_hub import hf_hub_download
 
 
 
@@ -32,6 +33,17 @@ def load_amzn_books(interactions_path: str, config: Dict) -> pd.DataFrame:
             min_item_interactions=5
         )
 
+    return df
+
+def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame:
+    path = interactions_path or hf_hub_download(
+        repo_id="matfu21/yambda-50m-lag-features",
+        repo_type="dataset",
+        filename="listens.parquet",
+    )
+    df = pd.read_parquet(path).rename(columns=config["col_mapping"])
+    df["feedback"] = 1
+    df["action_code"] = df["is_like"].astype("int8") + 2 * df["is_full_play"].astype("int8")
     return df
 
 
