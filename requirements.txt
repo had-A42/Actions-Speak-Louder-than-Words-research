@@ -8,4 +8,5 @@ numba
 requests
 pyarrow
 huggingface_hub
+ipywidgets
 git+https://github.com/evfro/polara.git#egg=polara
