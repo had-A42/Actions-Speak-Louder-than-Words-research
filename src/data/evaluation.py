@@ -7,6 +7,9 @@ from torch.utils.data import DataLoader
 
 
 def get_metrics(targets: List[int], candidates: List[int], topk: int) -> Dict[str, float]:
+    if not candidates:
+        return {'hitrate': 0.0, 'recall': 0.0, 'ndcg': 0.0}
+    
     candidates = np.asarray(candidates[:topk])
     targets = np.asarray(targets)
     gu_size = len(np.unique(targets))
