@@ -43,7 +43,6 @@ class HSTUExperimentConfig:
     relative_attention_num_buckets: int = 128
     item_id_offset: int = 1
     filter_seen: bool = True
-    num_workers: int = 0
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
 

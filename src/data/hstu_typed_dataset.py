@@ -19,21 +19,36 @@ class FeatureTokenSpec:
     missing_token_id: int = 0
     value_offset: int = 0
     transform: Optional[Callable[[Any], int]] = None
+    max_values_per_event: int = 1
 
     def __post_init__(self) -> None:
         if self.type_id <= ITEM_TOKEN_TYPE_ID:
             raise ValueError("feature type_id must be greater than ITEM_TOKEN_TYPE_ID")
         if self.num_embeddings <= 0:
             raise ValueError("num_embeddings must be positive")
+        if self.max_values_per_event <= 0:
+            raise ValueError("max_values_per_event must be positive")
 
     def encode(self, value: Any) -> int:
-        if pd.isna(value):
+        if _is_missing_value(value):
             return self.missing_token_id
         if self.transform is not None:
             encoded = self.transform(value)
         else:
             encoded = int(value)
         return encoded + self.value_offset
+
+    def encode_many(self, value: Any) -> List[int]:
+        if _is_missing_value(value):
+            return [self.missing_token_id]
+
+        if _is_sequence_value(value):
+            values = list(value)[: self.max_values_per_event]
+            if not values:
+                return [self.missing_token_id]
+            return [self.encode(item) for item in values]
+
+        return [self.encode(value)]
 
 
 @dataclass(frozen=True)
@@ -63,7 +78,22 @@ class TypedTokenSchema:
 
     @property
     def tokens_per_event(self) -> int:
-        return 1 + len(self.feature_specs)
+        return 1 + sum(spec.max_values_per_event for spec in self.feature_specs)
+
+
+def _is_missing_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if _is_sequence_value(value):
+        return False
+    return bool(pd.isna(value))
+
+
+def _is_sequence_value(value: Any) -> bool:
+    return (
+        not isinstance(value, (str, bytes, dict))
+        and hasattr(value, "__iter__")
+    )
 
 
 def amazon_rating_token_schema(
@@ -113,8 +143,9 @@ def _event_to_tokens(
     token_ids = [int(event[item_col])]
     token_types = [schema.item_type_id]
     for spec in schema.feature_specs:
-        token_ids.append(spec.encode(event.get(spec.column)))
-        token_types.append(spec.type_id)
+        feature_token_ids = spec.encode_many(event.get(spec.column))
+        token_ids.extend(feature_token_ids)
+        token_types.extend([spec.type_id] * len(feature_token_ids))
     return token_ids, token_types
 
 

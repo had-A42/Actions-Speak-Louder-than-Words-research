@@ -11,6 +11,7 @@ from .amzn_typed_exp import (
 )
 from .hstu_typed_pipeline import (
     TypedHSTUExperimentConfig,
+    build_typed_hstu_model,
     build_typed_hstu_dataloaders,
     evaluate_typed_hstu,
     train_typed_hstu,
@@ -30,6 +31,7 @@ __all__ = [
     "build_movielens_hstu_dataloaders",
     "build_movielens_typed_hstu_dataloaders",
     "build_typed_hstu_dataloaders",
+    "build_typed_hstu_model",
     "evaluate_hstu",
     "evaluate_typed_hstu",
     "run_amazon_hstu_experiment",
