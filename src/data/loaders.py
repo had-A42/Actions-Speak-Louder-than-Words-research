@@ -16,6 +16,15 @@ def load_yambda(interactions_path: str, config: Dict) -> pd.DataFrame:
     df = pd.read_parquet(interactions_path, columns=list(config["col_mapping"].keys()))
     df = df.rename(columns=config["col_mapping"])
     df["feedback"] = 1
+
+    df = filter_core_records(
+            df,
+            user_id_column="user_id",
+            item_id_column="item_id",
+            min_user_interactions=0,
+            min_item_interactions=5
+        )
+
     return df
 
 
@@ -40,6 +49,8 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
         repo_id="matfu21/yambda-50m-lag-features",
         repo_type="dataset",
         filename="listens.parquet",
+        cache_dir="hf_cache",
+
     )
     df = pd.read_parquet(path).rename(columns=config["col_mapping"])
 
@@ -47,6 +58,7 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
         repo_id="yandex/yambda",
         repo_type="dataset",
         filename="artist_item_mapping.parquet",
+        cache_dir="hf_cache",
     )
 
     artists = pd.read_parquet(artist_path, columns=["item_id", "artist_id"])
@@ -54,20 +66,50 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
     artists = (
         artists
         .sort_values(["item_id", "artist_id"])
-        .drop_duplicates("item_id")
+        .groupby("item_id", as_index=False)["artist_id"]
+        .agg(lambda values: [int(value) for value in values.drop_duplicates()])
+        .rename(columns={"artist_id": "artist_ids"})
+    )
+
+    album_path = config.get("album_mapping_path") or hf_hub_download(
+        repo_id="yandex/yambda",
+        repo_type="dataset",
+        filename="album_item_mapping.parquet",
+        cache_dir="hf_cache",
+    )
+
+    albums = pd.read_parquet(album_path, columns=["item_id", "album_id"])
+
+    albums = (
+        albums
+        .sort_values(["item_id", "album_id"])
+        .groupby("item_id", as_index=False)["album_id"]
+        .agg(lambda values: [int(value) for value in values.drop_duplicates()])
+        .rename(columns={"album_id": "album_ids"})
     )
 
     df = df.merge(artists, on="item_id", how="left")
-    df["artist_id"] = df["artist_id"].fillna(-1).astype("int64")
+    df["artist_ids"] = df["artist_ids"].apply(
+        lambda values: values if isinstance(values, list) else []
+    )
+    df["artist_id"] = df["artist_ids"].apply(
+        lambda values: values[0] if values else -1
+    ).astype("int64")
+    df = df.merge(albums, on="item_id", how="left")
+    df["album_ids"] = df["album_ids"].apply(
+        lambda values: values if isinstance(values, list) else []
+    )
+    df["album_id"] = df["album_ids"].apply(
+        lambda values: values[0] if values else -1
+    ).astype("int64")
 
     df["feedback"] = 1
     df["action_code"] = df["is_like"].astype("int8") + 2 * df["is_full_play"].astype("int8")
     return df
 
 
-
 def split_and_reindex(df: pd.DataFrame, config: Dict):
-    train_, test_ = temporal_train_test_split(df, test_last_seconds=df['timestamp'].max() - df['timestamp'].quantile(1 - config["test_quantile"]), gap_seconds=15 * 60)
+    train_, test_ = temporal_train_test_split(df, test_last_seconds=df['timestamp'].max() - df['timestamp'].quantile(1 - config["test_quantile"]), gap_seconds=15*60)
     
     train, data_index = transform_indices(train_, users='user_id', items='item_id')
     test = reindex_data(test_, data_index, entities=['users', 'items'], filter_invalid=True)
