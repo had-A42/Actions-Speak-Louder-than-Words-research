@@ -6,12 +6,11 @@ This repository contains experiments with neural recommender models for sequenti
 
 - `src/data/` - dataset loading, temporal train/test split, user and item reindexing.
 - `src/evaluation/` - recommendation metrics and normalized entropy for action prediction tasks.
+- `src/retrieval/` - baseline transformers for retrieval stage
 - `src/HSTU/` - HSTU and typed HSTU implementations, dataloaders, and training/evaluation pipelines.
 - `src/DLRM/` - ranking models for DLRM experiments.
 - `src/HSTU/notebooks/` - main HSTU experiments.
 - `src/examples/dlrm_models.ipynb` - example notebook for running DLRM models.
-- `tmp/` - local dataset files.
-- `hf_cache/` - Hugging Face dataset cache.
 
 ## Installation
 
@@ -31,7 +30,7 @@ If you use CUDA, install the `torch` version that matches your CUDA setup before
 
 Datasets can be downloaded from the shared Google Drive folder:
 
-[https://drive.google.com/drive/folders/18xyk7ul7MaSrUXxFpGO6-jWIho6wk0D_](https://drive.google.com/drive/folders/18xyk7ul7MaSrUXxFpGO6-jWIho6wk0D_)
+[https://drive.google.com/drive/folders/18xyk7ul7MaSrUXxFpGO6-jWIho6wk0D\_](https://drive.google.com/drive/folders/18xyk7ul7MaSrUXxFpGO6-jWIho6wk0D_)
 
 Each notebook has a `config` dictionary in the first cells. Be careful to set the correct dataset path in `interactions_path` before running an experiment; several notebooks use relative paths such as `../../../tmp/...`, which only work when the dataset files are placed exactly where the notebook expects them.
 
@@ -56,7 +55,7 @@ Main notebooks:
 - `src/HSTU/notebooks/yambda-retrieval-hstu-stochastic-length.ipynb` - HSTU on Yambda with stochastic length sampling.
 - `src/HSTU/notebooks/hstu_test_typed.ipynb` - typed HSTU on Yambda lag features with action label prediction.
 - `src/examples/dlrm_models.ipynb` - DLRM/ranker models on Yambda lag features.
-- `hstu.ipynb` - early exploratory notebook with an HSTU prototype.
+- `src/retrieval/retrieval.ipynb` - Baselines for retrieval
 
 ## Notebook Config Checklist
 
