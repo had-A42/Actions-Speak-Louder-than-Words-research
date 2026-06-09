@@ -1,8 +1,11 @@
-from typing import Any, Dict, Iterable, List, Mapping, Tuple
+import math
+from typing import Any, Dict, Iterable, List, Literal, Mapping, Tuple
 
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+
+StochasticLengthSampling = Literal["random_subsequence", "contiguous_window"]
 
 
 def create_masked_tensor(
@@ -43,13 +46,59 @@ class HSTUTrainDataset(Dataset):
         histories: Mapping[Any, List[int]],
         timestamp_histories: Mapping[Any, List[int]] | None = None,
         max_seq_len: int = 128,
+        stochastic_length_alpha: float | None = None,
+        stochastic_length_sampling: StochasticLengthSampling = "random_subsequence",
     ) -> None:
         super().__init__()
         if max_seq_len <= 0:
             raise ValueError("max_seq_len must be positive")
+        if stochastic_length_alpha is not None and not (
+            1.0 < stochastic_length_alpha <= 2.0
+        ):
+            raise ValueError("stochastic_length_alpha must be in (1, 2]")
+        if stochastic_length_sampling not in (
+            "random_subsequence",
+            "contiguous_window",
+        ):
+            raise ValueError(
+                "stochastic_length_sampling must be "
+                "'random_subsequence' or 'contiguous_window'"
+            )
 
         self.max_seq_len = max_seq_len
+        self.stochastic_length_alpha = stochastic_length_alpha
+        self.stochastic_length_sampling = stochastic_length_sampling
+        self.full_sequence_threshold = max_seq_len
         self.samples: List[Dict[str, Any]] = []
+        self._sl_histories: List[Dict[str, Any]] = []
+
+        if stochastic_length_alpha is not None:
+            max_history_len = max(
+                (len(history) for history in histories.values()),
+                default=0,
+            )
+            if max_history_len < 2:
+                return
+
+            threshold = math.ceil(max_history_len ** (stochastic_length_alpha / 2.0))
+            self.full_sequence_threshold = min(max_seq_len, max(2, threshold))
+
+            for uid, history in histories.items():
+                if len(history) < 2:
+                    continue
+                sample = {
+                    "uid": uid,
+                    "history": list(history),
+                }
+                if timestamp_histories is not None:
+                    timestamps = timestamp_histories[uid]
+                    if len(timestamps) != len(history):
+                        raise ValueError(
+                            "timestamp history length must match item history length"
+                        )
+                    sample["timestamps"] = list(timestamps)
+                self._sl_histories.append(sample)
+            return
 
         for uid, history in histories.items():
             if len(history) < 2:
@@ -82,10 +131,70 @@ class HSTUTrainDataset(Dataset):
                 self.samples.append(sample)
 
     def __len__(self) -> int:
+        if self.stochastic_length_alpha is not None:
+            return len(self._sl_histories)
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
+        if self.stochastic_length_alpha is not None:
+            return self._sample_stochastic_length(self._sl_histories[idx])
         return self.samples[idx]
+
+    def _sample_stochastic_length(self, sample: Dict[str, Any]) -> Dict[str, Any]:
+        history = sample["history"]
+        timestamps = sample.get("timestamps")
+        sampled_history, sampled_timestamps = self._sample_history(history, timestamps)
+
+        if len(sampled_history) < 2:
+            sampled_history = history[-2:]
+            sampled_timestamps = timestamps[-2:] if timestamps is not None else None
+
+        inputs = sampled_history[:-1]
+        targets = sampled_history[1:]
+        output = {
+            "uid": sample["uid"],
+            "history": inputs,
+            "targets": targets,
+            "length": len(inputs),
+        }
+        if sampled_timestamps is not None:
+            output["timestamps"] = sampled_timestamps[:-1]
+        return output
+
+    def _sample_history(
+        self,
+        history: List[int],
+        timestamps: List[int] | None,
+    ) -> Tuple[List[int], List[int] | None]:
+        history_len = len(history)
+        threshold = self.full_sequence_threshold
+        if history_len <= threshold:
+            return list(history), list(timestamps) if timestamps is not None else None
+
+        p_full = min(1.0, (threshold * threshold) / (history_len * history_len))
+        if torch.rand(()) < p_full:
+            full_len = min(history_len, self.max_seq_len)
+            start = int(torch.randint(0, history_len - full_len + 1, ()).item())
+            end = start + full_len
+            sampled_timestamps = (
+                timestamps[start:end] if timestamps is not None else None
+            )
+            return history[start:end], sampled_timestamps
+
+        if self.stochastic_length_sampling == "contiguous_window":
+            start = int(torch.randint(0, history_len - threshold + 1, ()).item())
+            end = start + threshold
+            sampled_timestamps = (
+                timestamps[start:end] if timestamps is not None else None
+            )
+            return history[start:end], sampled_timestamps
+
+        indices = torch.randperm(history_len)[:threshold].sort().values.tolist()
+        sampled_history = [history[index] for index in indices]
+        sampled_timestamps = (
+            [timestamps[index] for index in indices] if timestamps is not None else None
+        )
+        return sampled_history, sampled_timestamps
 
 
 class HSTUEvalDataset(Dataset):
@@ -200,6 +309,8 @@ def build_train_eval_datasets(
     user_col: str = "user_id",
     item_col: str = "item_id",
     time_col: str = "timestamp",
+    stochastic_length_alpha: float | None = None,
+    stochastic_length_sampling: StochasticLengthSampling = "random_subsequence",
 ) -> Tuple[HSTUTrainDataset, HSTUEvalDataset, Dict[int, List[int]]]:
     histories = build_histories(
         interactions=train,
@@ -228,6 +339,8 @@ def build_train_eval_datasets(
         histories=histories,
         timestamp_histories=timestamp_histories,
         max_seq_len=max_seq_len,
+        stochastic_length_alpha=stochastic_length_alpha,
+        stochastic_length_sampling=stochastic_length_sampling,
     )
     eval_dataset = HSTUEvalDataset(
         histories=histories,
@@ -253,4 +366,5 @@ __all__ = [
     "collate_fn",
     "create_masked_tensor",
     "iter_train_targets",
+    "StochasticLengthSampling",
 ]
