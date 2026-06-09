@@ -9,6 +9,7 @@ from tqdm.auto import tqdm
 from src.data.hstu_dataset import (
     HSTUEvalDataset,
     HSTUTrainDataset,
+    StochasticLengthSampling,
     build_train_eval_datasets,
     collate_fn,
 )
@@ -41,6 +42,8 @@ class HSTUExperimentConfig:
     attn_dropout_rate: float = 0.0
     enable_relative_attention_bias: bool = False
     relative_attention_num_buckets: int = 128
+    stochastic_length_alpha: float | None = None
+    stochastic_length_sampling: StochasticLengthSampling = "random_subsequence"
     item_id_offset: int = 1
     filter_seen: bool = True
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
@@ -67,6 +70,8 @@ def build_hstu_dataloaders(
     item_col: str = "item_id",
     time_col: str = "timestamp",
     num_workers: int = 0,
+    stochastic_length_alpha: float | None = None,
+    stochastic_length_sampling: StochasticLengthSampling = "random_subsequence",
 ) -> Tuple[DataLoader, DataLoader, HSTUTrainDataset, HSTUEvalDataset, Dict[int, List[int]]]:
     train_dataset, eval_dataset, targets = build_train_eval_datasets(
         train=train,
@@ -75,6 +80,8 @@ def build_hstu_dataloaders(
         user_col=user_col,
         item_col=item_col,
         time_col=time_col,
+        stochastic_length_alpha=stochastic_length_alpha,
+        stochastic_length_sampling=stochastic_length_sampling,
     )
 
     train_loader = DataLoader(

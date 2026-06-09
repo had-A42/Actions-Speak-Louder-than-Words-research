@@ -38,7 +38,7 @@ def load_amzn_books(interactions_path: str, config: Dict) -> pd.DataFrame:
             df,
             user_id_column="user_id",
             item_id_column="item_id",
-            min_user_interactions=0,
+            min_user_interactions=5,
             min_item_interactions=5
         )
 

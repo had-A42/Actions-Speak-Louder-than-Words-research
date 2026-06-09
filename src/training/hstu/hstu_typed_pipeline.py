@@ -74,13 +74,6 @@ def build_typed_hstu_dataloaders(
     TypedHSTUEvalDataset,
     Dict[int, List[Dict[str, Any]]],
 ]:
-    """Build batch-indexed datasets and DataLoaders.
-
-    Both datasets pre-collate samples into tensor-dict batches internally
-    (mirroring the deeprecsys ``RankerDataset`` pattern).  The DataLoaders
-    therefore use ``batch_size=1`` and ``collate_fn=lambda b: b[0]`` so that
-    each iteration yields one pre-built batch tensor dict directly.
-    """
     train_dataset, eval_dataset, targets = build_typed_train_eval_datasets(
         train=train,
         test=test,
@@ -93,9 +86,6 @@ def build_typed_hstu_dataloaders(
         label_columns=label_columns,
         show_progress=show_progress,
     )
-    # Datasets are already batch-indexed: __getitem__ returns a tensor dict.
-    # Use batch_size=1 + identity collate so the DataLoader just unwraps the
-    # single-element list returned by the default collation.
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=1,
