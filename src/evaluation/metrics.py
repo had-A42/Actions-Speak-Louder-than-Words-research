@@ -4,29 +4,6 @@ from typing import Dict, List, Mapping
 import numpy as np
 
 
-def compute_normalized_entropy(
-    labels: np.ndarray,
-    logits: np.ndarray | None = None,
-    probs: np.ndarray | None = None,
-    eps: float = 1e-12,
-) -> float:
-    y = np.asarray(labels, dtype=np.float64)
-
-    if logits is not None:
-        z = np.asarray(logits, dtype=np.float64)
-        logloss = np.maximum(z, 0.0) - z * y + np.log1p(np.exp(-np.abs(z)))
-    elif probs is not None:
-        p = np.clip(np.asarray(probs), eps, 1.0 - eps)
-        logloss = -(y * np.log(p) + (1.0 - y) * np.log(1.0 - p))
-    else:
-        raise ValueError("Pass either logits or probs")
-
-    model_logloss = float(logloss.mean())
-    p_base = float(np.clip(y.mean(), eps, 1.0 - eps))
-    baseline_entropy = -(p_base * np.log(p_base) + (1.0 - p_base) * np.log(1.0 - p_base))
-    return float(model_logloss / baseline_entropy)
-
-
 def ranking_metrics_at_k(
     targets: List[int],
     candidates: List[int],
@@ -89,3 +66,30 @@ def evaluate_recommendations(
     }
     result["coverage"] = len(unique_items) / catalog_size
     return result
+
+
+def compute_normalized_entropy(
+    labels: np.ndarray,
+    logits: np.ndarray | None = None,
+    probs: np.ndarray | None = None,
+    eps: float = 1e-12,
+) -> float:
+    """
+    - E-task NE is computed on `is_like`.
+    - C-task NE is computed on `is_full_play`.
+    """
+    y = np.asarray(labels, dtype=np.float64)
+
+    if logits is not None:
+        z = np.asarray(logits, dtype=np.float64)
+        logloss = np.maximum(z, 0.0) - z * y + np.log1p(np.exp(-np.abs(z)))
+    elif probs is not None:
+        p = np.clip(np.asarray(probs, dtype=np.float64), eps, 1.0 - eps)
+        logloss = -(y * np.log(p) + (1.0 - y) * np.log(1.0 - p))
+    else:
+        raise ValueError("Pass either logits or probs")
+
+    model_logloss = float(logloss.mean())
+    p_base = float(np.clip(y.mean(), eps, 1.0 - eps))
+    baseline_entropy = -(p_base * np.log(p_base) + (1.0 - p_base) * np.log(1.0 - p_base))
+    return float(model_logloss / baseline_entropy)

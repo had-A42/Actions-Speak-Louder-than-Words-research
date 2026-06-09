@@ -14,7 +14,11 @@ from src.data.hstu_dataset import (
     collate_fn,
 )
 from src.evaluation.metrics import evaluate_recommendations
-from src.models.hstu import HSTUModel, NegativeSamplingStrategy, UserEmbeddingNorm
+from src.HSTU.models.hstu import (
+    HSTUModel,
+    NegativeSamplingStrategy,
+    UserEmbeddingNorm,
+)
 
 
 @dataclass

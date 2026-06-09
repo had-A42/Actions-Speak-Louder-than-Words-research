@@ -16,9 +16,9 @@ from src.data.hstu_typed_dataset import (
 )
 from src.data.loaders import load_amzn_books, split_and_reindex
 from src.evaluation.metrics import compute_normalized_entropy
-from src.models.hstu import NegativeSamplingStrategy, UserEmbeddingNorm
-from src.models.hstu_typed import TypedHSTUModel
-from src.training.hstu.hstu_pipeline import move_batch_to_device
+from src.HSTU.models.hstu import NegativeSamplingStrategy, UserEmbeddingNorm
+from src.HSTU.models.hstu_typed import TypedHSTUModel
+from src.HSTU.training.hstu.hstu_pipeline import move_batch_to_device
 
 
 @dataclass

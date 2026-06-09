@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from src.data.hstu_dataset import create_masked_tensor
 from src.data.hstu_typed_dataset import ITEM_TOKEN_TYPE_ID, PADDING_TOKEN_TYPE_ID
-from src.models.hstu import (
+from src.HSTU.models.hstu import (
     HSTUBlock,
     NegativeSamplingStrategy,
     RelativeBucketedTimeAndPositionBasedBias,
