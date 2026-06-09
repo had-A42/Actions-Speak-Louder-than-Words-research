@@ -1,0 +1,71 @@
+[ml] TopPop @10: defaultdict(<class 'float'>, {'hitrate': 0.2928600242033078, 'recall': np.float64(0.07054695953949701), 'ndcg': np.float64(0.07300818359690014), 'coverage': 0.0005570720294134032})
+[ml] TopPop @50: defaultdict(<class 'float'>, {'hitrate': 0.5163372327551432, 'recall': np.float64(0.07649757295905328), 'ndcg': np.float64(0.07051531340755876), 'coverage': 0.002785360147067016})
+[ml] TopPop @200: defaultdict(<class 'float'>, {'hitrate': 0.7402178297700686, 'recall': np.float64(0.15275184551862056), 'ndcg': np.float64(0.10264106319682159), 'coverage': 0.011141440588268063})
+
+[ml] Random @10: defaultdict(<class 'float'>, {'hitrate': 0.038321903993545785, 'recall': np.float64(0.0041071988833182894), 'ndcg': np.float64(0.0041495376785208905), 'coverage': 0.9371622750821681})
+[ml] Random @50: defaultdict(<class 'float'>, {'hitrate': 0.1609519967728923, 'recall': np.float64(0.005521196012655359), 'ndcg': np.float64(0.0047631460523293164), 'coverage': 1.0})
+[ml] Random @200: defaultdict(<class 'float'>, {'hitrate': 0.37575635336829366, 'recall': np.float64(0.011857901161895881), 'ndcg': np.float64(0.00739275965865538), 'coverage': 1.0})
+
+[ml] iALS @10: defaultdict(<class 'float'>, {'hitrate': 0.002218636546994756, 'recall': np.float64(0.00022690601048810005), 'ndcg': np.float64(0.00031562946354426325), 'coverage': 0.02807643028243552})
+[ml] iALS @50: defaultdict(<class 'float'>, {'hitrate': 0.0052440500201694235, 'recall': np.float64(0.0001308262129157652), 'ndcg': np.float64(0.00018370187533643095), 'coverage': 0.09826750598852432})
+[ml] iALS @200: defaultdict(<class 'float'>, {'hitrate': 0.012505042355788625, 'recall': np.float64(0.00019678739780210208), 'ndcg': np.float64(0.00017488135160744528), 'coverage': 0.2934655450949808})
+
+[ml] SASRec @10: defaultdict(<class 'float'>, {'hitrate': 0.49173053650665594, 'recall': np.float64(0.11003220704713378), 'ndcg': np.float64(0.10817865936552783), 'coverage': 0.14506155645925017})
+[ml] SASRec @50: defaultdict(<class 'float'>, {'hitrate': 0.7730939895119, 'recall': np.float64(0.13478933729300058), 'ndcg': np.float64(0.11477130823527999), 'coverage': 0.2660018940449})
+[ml] SASRec @200: defaultdict(<class 'float'>, {'hitrate': 0.8975393303751513, 'recall': np.float64(0.2629241819644633), 'ndcg': np.float64(0.16668258085166418), 'coverage': 0.43618739903069464})
+
+[ml] GRU4Rec @10: defaultdict(<class 'float'>, {'hitrate': 0.4844695441710367, 'recall': np.float64(0.10629446077207395), 'ndcg': np.float64(0.10531756442060165), 'coverage': 0.1258982786474291})
+[ml] GRU4Rec @50: defaultdict(<class 'float'>, {'hitrate': 0.7688584106494554, 'recall': np.float64(0.13046376851237396), 'ndcg': np.float64(0.11226969099148652), 'coverage': 0.22828811765361262})
+[ml] GRU4Rec @200: defaultdict(<class 'float'>, {'hitrate': 0.8926986688180718, 'recall': np.float64(0.2560140527036764), 'ndcg': np.float64(0.16264733885674557), 'coverage': 0.3765249846805192})
+
+[ml] BERT4Rec @10: defaultdict(<class 'float'>, {'hitrate': 0.2987091569181121, 'recall': np.float64(0.05603305864499842), 'ndcg': np.float64(0.05489164201407691), 'coverage': 0.13547991755333966})
+[ml] BERT4Rec @50: defaultdict(<class 'float'>, {'hitrate': 0.609116579265833, 'recall': np.float64(0.07827614227954675), 'ndcg': np.float64(0.06510636569884277), 'coverage': 0.24672720182719626})
+[ml] BERT4Rec @200: defaultdict(<class 'float'>, {'hitrate': 0.8164582492940702, 'recall': np.float64(0.17803786206397695), 'ndcg': np.float64(0.10819432965531388), 'coverage': 0.4068854102835497})
+
+
+
+[yambda] TopPop @10: defaultdict(<class 'float'>, {'hitrate': 0.04363305950636972, 'recall': np.float64(0.00969571298766336), 'ndcg': np.float64(0.007205607685358081), 'coverage': 6.118153785913563e-05})
+[yambda] TopPop @50: defaultdict(<class 'float'>, {'hitrate': 0.1414875665251173, 'recall': np.float64(0.025632086941975125), 'ndcg': np.float64(0.012553901746647056), 'coverage': 0.0003059076892956781})
+[yambda] TopPop @200: defaultdict(<class 'float'>, {'hitrate': 0.2786730209357094, 'recall': np.float64(0.05864600501945935), 'ndcg': np.float64(0.021453802346461503), 'coverage': 0.0012236307571827124})
+
+[yambda] Random @10: defaultdict(<class 'float'>, {'hitrate': 0.0008530049882248225, 'recall': np.float64(0.00011471268772806027), 'ndcg': np.float64(8.950243919069802e-05), 'coverage': 0.9624284176007049})
+[yambda] Random @50: defaultdict(<class 'float'>, {'hitrate': 0.0038014352736106217, 'recall': np.float64(0.00029169656415022597), 'ndcg': np.float64(0.00014647947313578425), 'coverage': 1.0})
+[yambda] Random @200: defaultdict(<class 'float'>, {'hitrate': 0.015428264134848962, 'recall': np.float64(0.0012738178000274393), 'ndcg': np.float64(0.00041763643825959586), 'coverage': 1.0})
+
+[yambda] iALS @10: defaultdict(<class 'float'>, {'hitrate': 0.0007602870547221243, 'recall': np.float64(0.00013530931438473107), 'ndcg': np.float64(0.00010218478002072977), 'coverage': 0.012646223875483335})
+[yambda] iALS @50: defaultdict(<class 'float'>, {'hitrate': 0.003653086580006305, 'recall': np.float64(0.00034766907155317993), 'ndcg': np.float64(0.00017278483196200048), 'coverage': 0.034078116587538544})
+[yambda] iALS @200: defaultdict(<class 'float'>, {'hitrate': 0.014983218054036011, 'recall': np.float64(0.0012260984279935166), 'ndcg': np.float64(0.0004234960522270265), 'coverage': 0.08095541089520826})
+
+[yambda] SASRec @10: defaultdict(<class 'float'>, {'hitrate': 0.15261371854544106, 'recall': np.float64(0.031591884502299036), 'ndcg': np.float64(0.0261927401784986), 'coverage': 0.23735377612451666})
+[yambda] SASRec @50: defaultdict(<class 'float'>, {'hitrate': 0.36215624826153875, 'recall': np.float64(0.07459325493652488), 'ndcg': np.float64(0.04071064517288057), 'coverage': 0.4501064558758749})
+[yambda] SASRec @200: defaultdict(<class 'float'>, {'hitrate': 0.5756485619448514, 'recall': np.float64(0.17457437295585346), 'ndcg': np.float64(0.06879981120724703), 'coverage': 0.6994212226518526})
+
+[yambda] GRU4Rec @10: defaultdict(<class 'float'>, {'hitrate': 0.12822890203423146, 'recall': np.float64(0.0255448061621218), 'ndcg': np.float64(0.021692824430548208), 'coverage': 0.05503891145807841})
+[yambda] GRU4Rec @50: defaultdict(<class 'float'>, {'hitrate': 0.3195245424369982, 'recall': np.float64(0.06225366563747672), 'ndcg': np.float64(0.033939435434245616), 'coverage': 0.11947530713132005})
+[yambda] GRU4Rec @200: defaultdict(<class 'float'>, {'hitrate': 0.528696200419085, 'recall': np.float64(0.14845847797187214), 'ndcg': np.float64(0.05811743176764374), 'coverage': 0.22643898977044688})
+
+[yambda] BERT4Rec @10: defaultdict(<class 'float'>, {'hitrate': 0.10046915274352365, 'recall': np.float64(0.019994041033131613), 'ndcg': np.float64(0.016477563362837944), 'coverage': 0.05777372620038177})
+[yambda] BERT4Rec @50: defaultdict(<class 'float'>, {'hitrate': 0.2770411853060619, 'recall': np.float64(0.05331804326379471), 'ndcg': np.float64(0.02761491252440342), 'coverage': 0.13369389652978317})
+[yambda] BERT4Rec @200: defaultdict(<class 'float'>, {'hitrate': 0.49279581656684035, 'recall': np.float64(0.1318419137652725), 'ndcg': np.float64(0.04940755119858068), 'coverage': 0.2613736478880133})
+
+
+
+[amzn-books] TopPop @10: defaultdict(<class 'float'>, {'hitrate': 0.004659732761541425, 'recall': np.float64(0.0022717596929874673), 'ndcg': np.float64(0.0011328359190526623), 'coverage': 1.1109938395391597e-05})
+[amzn-books] TopPop @50: defaultdict(<class 'float'>, {'hitrate': 0.01802629685839332, 'recall': np.float64(0.008848225408069399), 'ndcg': np.float64(0.002779691996400565), 'coverage': 5.5549691976957986e-05})
+[amzn-books] TopPop @200: defaultdict(<class 'float'>, {'hitrate': 0.03738925012647183, 'recall': np.float64(0.018408811323277607), 'ndcg': np.float64(0.004497800347985698), 'coverage': 0.00022219876790783194})
+
+[amzn-books] Random @10: defaultdict(<class 'float'>, {'hitrate': 1.3923504267554058e-05, 'recall': np.float64(7.1164577367498516e-06), 'ndcg': np.float64(2.950984276574749e-06), 'coverage': 0.9087107471989068})
+[amzn-books] Random @50: defaultdict(<class 'float'>, {'hitrate': 0.000162440883121464, 'recall': np.float64(5.971963551802526e-05), 'ndcg': np.float64(1.68063651314187e-05), 'coverage': 0.9999944450308023})
+[amzn-books] Random @200: defaultdict(<class 'float'>, {'hitrate': 0.00044555213656172985, 'recall': np.float64(0.00021065526445490177), 'ndcg': np.float64(4.8216146820072966e-05), 'coverage': 1.0})
+
+[amzn-books] SASRec @10: defaultdict(<class 'float'>, {'hitrate': 0.02401804486153075, 'recall': np.float64(0.0111653722596203), 'ndcg': np.float64(0.007355651226518001), 'coverage': 0.2307023147556647})
+[amzn-books] SASRec @50: defaultdict(<class 'float'>, {'hitrate': 0.06105920738131373, 'recall': np.float64(0.03027552590958504), 'ndcg': np.float64(0.012373392530841866), 'coverage': 0.45954704781161987})
+[amzn-books] SASRec @200: defaultdict(<class 'float'>, {'hitrate': 0.11876285023414693, 'recall': np.float64(0.06584531944232211), 'ndcg': np.float64(0.01900431635624236), 'coverage': 0.6796804781717486})
+
+[amzn-books] GRU4Rec @10: defaultdict(<class 'float'>, {'hitrate': 0.025071590017775675, 'recall': np.float64(0.011749553508579272), 'ndcg': np.float64(0.007418805395215661), 'coverage': 0.11401018781350858})
+[amzn-books] GRU4Rec @50: defaultdict(<class 'float'>, {'hitrate': 0.06660540324788942, 'recall': np.float64(0.03364741983502817), 'ndcg': np.float64(0.013152886025674685), 'coverage': 0.2518556374604903})
+[amzn-books] GRU4Rec @200: defaultdict(<class 'float'>, {'hitrate': 0.1300780180355792, 'recall': np.float64(0.07306218969380786), 'ndcg': np.float64(0.020527012256102584), 'coverage': 0.43909476221954347})
+
+[amzn-books] BERT4Rec @10: defaultdict(<class 'float'>, {'hitrate': 0.01648078788469482, 'recall': np.float64(0.007341928260949095), 'ndcg': np.float64(0.004333345717073405), 'coverage': 0.044105344435865106})
+[amzn-books] BERT4Rec @50: defaultdict(<class 'float'>, {'hitrate': 0.04777618431006716, 'recall': np.float64(0.022748444250263674), 'ndcg': np.float64(0.008408728645919041), 'coverage': 0.10173037290508224})
+[amzn-books] BERT4Rec @200: defaultdict(<class 'float'>, {'hitrate': 0.10057411249263215, 'recall': np.float64(0.053682257870336376), 'ndcg': np.float64(0.014197242895258418), 'coverage': 0.1907709741749482})

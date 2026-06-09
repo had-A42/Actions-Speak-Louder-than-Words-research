@@ -9,6 +9,9 @@ mmh3
 numba
 requests
 pyarrow
+huggingface_hub
+ipywidgets
+implicit
 git+https://github.com/evfro/polara.git#egg=polara
 mmh3
 datasets

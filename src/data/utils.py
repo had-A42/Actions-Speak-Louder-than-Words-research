@@ -3,6 +3,7 @@ from typing import List, Tuple
 
 import requests
 from tqdm import tqdm
+import torch
 
 def download_file(
     url: str,
@@ -112,3 +113,64 @@ def split_global_temporal(
     history = [iid for iid, ts in zip(item_ids, timestamps) if ts < split_timestamp]
     targets = [iid for iid, ts in zip(item_ids, timestamps) if ts >= split_timestamp]
     return history, targets
+
+def create_masked_tensor(data: torch.Tensor, lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Converts a batch of flattened variable-length sequences into a padded tensor and mask.
+    Supports:
+        - indices: data shape (total_num_elements,)
+        - embeddings/features: data shape (total_num_elements, d1, d2, ...)
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        Input tensor containing flattened sequences:
+        - For indices: shape (total_num_elements,)
+        - For embeddings: shape (total_num_elements, embedding_dim)
+    lengths : torch.Tensor
+        1D tensor of sequence lengths, shape (batch_size,). Specifies the actual length
+        of each sequence.
+
+    Returns
+    -------
+    Tuple[torch.Tensor, torch.Tensor]
+        - padded_tensor: Padded tensor of shape:
+            - (batch_size, max_seq_len) for indices
+            - (batch_size, max_seq_len, embedding_dim) for embeddings
+            Shorter sequences are right-padded with zeros.
+        - mask: Boolean mask of shape (batch_size, max_seq_len) where True indicates
+            valid elements and False indicates padding. Can be used in attention or loss computation.
+
+    Examples
+    --------
+    >>> data = torch.tensor([1, 2, 3, 4, 5, 6])  # sequences: [1,2], [3,4,5], [6]
+    >>> lengths = torch.tensor([2, 3, 1])
+    >>> padded, mask = create_masked_tensor(data, lengths)
+    >>> padded
+    tensor([[1, 2, 0],
+            [3, 4, 5],
+            [6, 0, 0]])
+    >>> mask
+    tensor([[ True,  True, False],
+            [ True,  True,  True],
+            [ True, False, False]])
+    """
+
+    padded = torch.zeros((len(lengths), lengths.max()) + tuple(data.shape[1:]), dtype=data.dtype, device=data.device)
+
+    mask = (torch.arange(lengths.max(), device=lengths.device).expand(len(lengths), lengths.max()) < lengths.unsqueeze(1))
+    padded.masked_scatter_(mask.reshape(mask.shape + (1,) * len(data.shape[1:])).expand_as(padded), data)
+
+    return padded, mask
+
+
+def build_q_from_train_targets(
+    train_targets: torch.Tensor,
+    catalog_size: int
+) -> torch.Tensor:
+    if train_targets.numel() == 0:
+        raise ValueError("train_targets пустой")
+    flat = train_targets.flatten()
+    if (flat < 0).any() or (flat >= catalog_size).any():
+        raise ValueError("Некорректные id")
+    return torch.bincount(flat, minlength=catalog_size).float()

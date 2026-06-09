@@ -12,6 +12,7 @@ def load_ml20m(interactions_path: str, config: Dict) -> pd.DataFrame:
     return df
 
 
+
 def load_yambda(interactions_path: str, config: Dict) -> pd.DataFrame:
     df = pd.read_parquet(interactions_path, columns=list(config["col_mapping"].keys()))
     df = df.rename(columns=config["col_mapping"])
