@@ -44,6 +44,7 @@ class HSTUExperimentConfig:
     item_id_offset: int = 1
     filter_seen: bool = True
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    num_workers: int = 0
 
 
 def move_batch_to_device(

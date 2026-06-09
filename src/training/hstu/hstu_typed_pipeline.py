@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
@@ -12,10 +13,9 @@ from src.data.hstu_typed_dataset import (
     TypedTokenSchema,
     amazon_rating_token_schema,
     build_typed_train_eval_datasets,
-    typed_collate_fn,
 )
 from src.data.loaders import load_amzn_books, split_and_reindex
-from src.evaluation.metrics import evaluate_recommendations
+from src.evaluation.metrics import compute_normalized_entropy
 from src.models.hstu import NegativeSamplingStrategy, UserEmbeddingNorm
 from src.models.hstu_typed import TypedHSTUModel
 from src.training.hstu.hstu_pipeline import move_batch_to_device
@@ -30,6 +30,8 @@ class TypedHSTUExperimentConfig:
     learning_rate: float = 1e-3
     weight_decay: float = 0.0
     topk: int = 100
+    output_size: int = 2
+    label_columns: Tuple[str, ...] = ("is_like", "is_full_play")
     embedding_dim: int = 64
     num_blocks: int = 4
     num_heads: int = 4
@@ -62,36 +64,51 @@ def build_typed_hstu_dataloaders(
     user_col: str = "user_id",
     item_col: str = "item_id",
     time_col: str = "timestamp",
+    label_columns: Tuple[str, ...] = ("is_like", "is_full_play"),
     num_workers: int = 0,
+    show_progress: bool = True,
 ) -> Tuple[
     DataLoader,
     DataLoader,
     TypedHSTUTrainDataset,
     TypedHSTUEvalDataset,
-    Dict[int, List[int]],
+    Dict[int, List[Dict[str, Any]]],
 ]:
+    """Build batch-indexed datasets and DataLoaders.
+
+    Both datasets pre-collate samples into tensor-dict batches internally
+    (mirroring the deeprecsys ``RankerDataset`` pattern).  The DataLoaders
+    therefore use ``batch_size=1`` and ``collate_fn=lambda b: b[0]`` so that
+    each iteration yields one pre-built batch tensor dict directly.
+    """
     train_dataset, eval_dataset, targets = build_typed_train_eval_datasets(
         train=train,
         test=test,
         schema=schema,
         max_events_len=max_events_len,
+        batch_size=train_batch_size,  # train batch size used for both datasets
         user_col=user_col,
         item_col=item_col,
         time_col=time_col,
+        label_columns=label_columns,
+        show_progress=show_progress,
     )
+    # Datasets are already batch-indexed: __getitem__ returns a tensor dict.
+    # Use batch_size=1 + identity collate so the DataLoader just unwraps the
+    # single-element list returned by the default collation.
     train_loader = DataLoader(
         dataset=train_dataset,
-        batch_size=train_batch_size,
+        batch_size=1,
         shuffle=True,
-        collate_fn=typed_collate_fn,
-        drop_last=True,
+        collate_fn=lambda batch: batch[0],
+        drop_last=False,
         num_workers=num_workers,
     )
     eval_loader = DataLoader(
         dataset=eval_dataset,
-        batch_size=eval_batch_size,
+        batch_size=1,
         shuffle=False,
-        collate_fn=typed_collate_fn,
+        collate_fn=lambda batch: batch[0],
         drop_last=False,
         num_workers=num_workers,
     )
@@ -106,14 +123,19 @@ def train_typed_hstu(
     device: str | torch.device,
     grad_clip_norm: Optional[float] = None,
     show_progress: bool = True,
-) -> List[float]:
+    eval_loader: Optional[DataLoader] = None,
+    label_columns: Tuple[str, ...] = ("is_like", "is_full_play"),
+) -> List[float] | Tuple[List[float], List[Dict[str, float]]]:
     model.to(device)
     losses: List[float] = []
+    eval_metrics_history: List[Dict[str, float]] = []
+
+    eval_requested = eval_loader is not None
 
     for epoch in range(num_epochs):
         model.train()
         epoch_loss = 0.0
-        epoch_examples = 0
+        epoch_events = 0
 
         batch_iter = tqdm(
             train_loader,
@@ -130,13 +152,35 @@ def train_typed_hstu(
                 torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
             optimizer.step()
 
-            batch_size = int(batch["token_length"].shape[0])
-            epoch_loss += float(loss.item()) * batch_size
-            epoch_examples += batch_size
+            event_count = int(batch["labels"].shape[0])
+            epoch_loss += float(loss.item()) * event_count
+            epoch_events += event_count
             batch_iter.set_postfix(loss=float(loss.item()))
 
-        losses.append(epoch_loss / max(epoch_examples, 1))
+        avg_loss = epoch_loss / max(epoch_events, 1)
+        losses.append(avg_loss)
 
+        if eval_requested:
+            metrics, _ = evaluate_typed_hstu(
+                model=model,
+                eval_loader=eval_loader,
+                device=device,
+                label_columns=label_columns,
+                show_progress=show_progress,
+            )
+            eval_metrics_history.append(metrics)
+            if show_progress:
+                metrics_str = ", ".join(
+                    f"{metric}={value:.4f}"
+                    for metric, value in sorted(metrics.items())
+                )
+                tqdm.write(
+                    f"typed epoch {epoch + 1}/{num_epochs}: "
+                    f"loss={avg_loss:.4f}, {metrics_str}"
+                )
+
+    if eval_requested:
+        return losses, eval_metrics_history
     return losses
 
 
@@ -144,38 +188,45 @@ def train_typed_hstu(
 def evaluate_typed_hstu(
     model: TypedHSTUModel,
     eval_loader: DataLoader,
-    targets: Dict[int, List[int]],
-    catalog_size: int,
-    topk: int,
     device: str | torch.device,
-    filter_seen: bool = True,
+    label_columns: Tuple[str, ...] = ("is_like", "is_full_play"),
     show_progress: bool = True,
-) -> Tuple[Dict[str, float], Dict[int, List[int]]]:
+) -> Tuple[Dict[str, float], Dict[str, np.ndarray]]:
     model.to(device)
     model.eval()
 
-    candidates: Dict[int, List[int]] = {}
+    all_labels: List[np.ndarray] = []
+    all_logits: List[np.ndarray] = []
     for batch in tqdm(
         eval_loader,
-        desc="Typed HSTU evaluation",
+        desc="Typed HSTU NE evaluation",
         disable=not show_progress,
     ):
         batch = move_batch_to_device(batch, device)
-        candidates.update(
-            model.recommend(
-                batch=batch,
-                topk=topk,
-                filter_seen=filter_seen,
-            )
+        logits = model.predict_logits(batch)
+        all_logits.append(logits.detach().cpu().numpy())
+        all_labels.append(batch["labels"].detach().cpu().numpy())
+
+    labels = np.concatenate(all_labels, axis=0)
+    logits = np.concatenate(all_logits, axis=0)
+    if logits.shape[1] != len(label_columns):
+        raise ValueError(
+            f"logits width {logits.shape[1]} does not match "
+            f"label_columns length {len(label_columns)}"
         )
 
-    metrics = evaluate_recommendations(
-        targets=targets,
-        candidates=candidates,
-        catalog_size=catalog_size,
-        topk=topk,
-    )
-    return metrics, candidates
+    metrics = {
+        "ne_e_task": compute_normalized_entropy(
+            labels=labels[:, 0],
+            logits=logits[:, 0],
+        ),
+    }
+    if len(label_columns) > 1:
+        metrics["ne_c_task"] = compute_normalized_entropy(
+            labels=labels[:, 1],
+            logits=logits[:, 1],
+        )
+    return metrics, {"labels": labels, "logits": logits}
 
 
 def build_typed_hstu_model(
@@ -183,18 +234,20 @@ def build_typed_hstu_model(
     schema: TypedTokenSchema,
     experiment_config: TypedHSTUExperimentConfig,
 ) -> TypedHSTUModel:
-    max_token_seq_len = experiment_config.max_events_len * schema.tokens_per_event
+    max_event_seq_len = experiment_config.max_events_len + 1
+    max_token_seq_len = max_event_seq_len * schema.tokens_per_event
     return TypedHSTUModel(
         num_items=num_items,
         embedding_dim=experiment_config.embedding_dim,
         max_token_seq_len=max_token_seq_len,
-        max_event_seq_len=experiment_config.max_events_len,
+        max_event_seq_len=max_event_seq_len,
         num_blocks=experiment_config.num_blocks,
         num_heads=experiment_config.num_heads,
         linear_dim=experiment_config.linear_dim,
         attention_dim=experiment_config.attention_dim,
         num_token_types=schema.num_token_types,
         feature_vocab_sizes=schema.feature_vocab_sizes,
+        output_size=experiment_config.output_size,
         num_negatives=experiment_config.num_negatives,
         softmax_temperature=experiment_config.softmax_temperature,
         sampling_strategy=experiment_config.sampling_strategy,
@@ -220,7 +273,7 @@ def build_amazon_typed_hstu_dataloaders(
     DataLoader,
     TypedHSTUTrainDataset,
     TypedHSTUEvalDataset,
-    Dict[int, List[int]],
+    Dict[int, List[Dict[str, Any]]],
     Dict[str, Any],
     pd.DataFrame,
     pd.DataFrame,
@@ -240,7 +293,9 @@ def build_amazon_typed_hstu_dataloaders(
             user_col=data_description["users"],
             item_col=data_description["items"],
             time_col=data_description["timestamp"],
+            label_columns=experiment_config.label_columns,
             num_workers=experiment_config.num_workers,
+            show_progress=True,
         )
     )
     return (
@@ -296,16 +351,15 @@ def run_amazon_typed_hstu_experiment(
         optimizer=optimizer,
         num_epochs=experiment_config.num_epochs,
         device=experiment_config.device,
+        eval_loader=eval_loader,
+        label_columns=experiment_config.label_columns,
         show_progress=show_progress,
     )
     metrics, candidates = evaluate_typed_hstu(
         model=model,
         eval_loader=eval_loader,
-        targets=targets,
-        catalog_size=data_description["n_items"],
-        topk=experiment_config.topk,
         device=experiment_config.device,
-        filter_seen=experiment_config.filter_seen,
+        label_columns=experiment_config.label_columns,
         show_progress=show_progress,
     )
 

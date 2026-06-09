@@ -49,6 +49,7 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
         repo_id="matfu21/yambda-50m-lag-features",
         repo_type="dataset",
         filename="listens.parquet",
+        cache_dir="hf_cache",
     )
     df = pd.read_parquet(path).rename(columns=config["col_mapping"])
 
@@ -56,6 +57,7 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
         repo_id="yandex/yambda",
         repo_type="dataset",
         filename="artist_item_mapping.parquet",
+        cache_dir="hf_cache",
     )
 
     artists = pd.read_parquet(artist_path, columns=["item_id", "artist_id"])
@@ -72,6 +74,7 @@ def load_yambda_lag(interactions_path: str | None, config: Dict) -> pd.DataFrame
         repo_id="yandex/yambda",
         repo_type="dataset",
         filename="album_item_mapping.parquet",
+        cache_dir="hf_cache",
     )
 
     albums = pd.read_parquet(album_path, columns=["item_id", "album_id"])

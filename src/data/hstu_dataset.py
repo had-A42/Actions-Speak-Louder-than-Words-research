@@ -237,24 +237,6 @@ def build_train_eval_datasets(
     )
     return train_dataset, eval_dataset, targets
 
-
-# def build_q_from_train_targets(
-#     train_targets: torch.Tensor,
-#     catalog_size: int,
-# ) -> torch.Tensor:
-#     if train_targets.numel() == 0:
-#         raise ValueError("train_targets must be non-empty")
-
-#     train_targets = train_targets.reshape(-1).long()
-#     if (
-#         int(train_targets.min().item()) < 0
-#         or int(train_targets.max().item()) >= catalog_size
-#     ):
-#         raise ValueError("train_targets contain ids outside [0, catalog_size)")
-
-#     return torch.bincount(train_targets, minlength=catalog_size)[:catalog_size].float()
-
-
 def iter_train_targets(dataset: HSTUTrainDataset) -> Iterable[int]:
     for idx in range(len(dataset)):
         yield from dataset[idx]["targets"]

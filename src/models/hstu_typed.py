@@ -292,6 +292,7 @@ class TypedHSTUModel(nn.Module):
         attention_dim: int = 16,
         num_token_types: int = 3,
         feature_vocab_sizes: Optional[Dict[int, int]] = None,
+        output_size: int = 2,
         num_negatives: int = 512,
         softmax_temperature: float = 0.05,
         sampling_strategy: NegativeSamplingStrategy = "local",
@@ -336,12 +337,27 @@ class TypedHSTUModel(nn.Module):
             relative_attention_num_buckets=relative_attention_num_buckets,
         )
         self.num_items = num_items
+        self.output_size = output_size
         self.num_negatives = num_negatives
         self.softmax_temperature = softmax_temperature
         self.sampling_strategy = sampling_strategy
         self.user_embedding_norm = user_embedding_norm
         self.l2_norm_embeddings = l2_norm_embeddings
         self.l2_norm_eps = l2_norm_eps
+        self.prediction_head = nn.Sequential(
+            nn.LayerNorm(embedding_dim),
+            nn.Linear(embedding_dim, embedding_dim),
+            nn.ReLU(),
+            nn.Linear(embedding_dim, output_size),
+        )
+        self.reset_prediction_head()
+
+    def reset_prediction_head(self) -> None:
+        for module in self.prediction_head:
+            if isinstance(module, nn.Linear):
+                _truncated_normal_(module.weight, std=0.02)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
 
     def _maybe_l2_norm(self, embeddings: torch.Tensor) -> torch.Tensor:
         if not self.l2_norm_embeddings:
@@ -381,46 +397,25 @@ class TypedHSTUModel(nn.Module):
         )
         return source_ids[sampled_offsets]
 
-    def compute_loss(
+    def compute_multitask_loss(
         self,
-        output_embeddings: torch.Tensor,
-        target_ids: torch.Tensor,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
     ) -> torch.Tensor:
-        output_embeddings = self._normalize_user_embeddings(output_embeddings)
-        shifted_targets = self.encoder.shift_item_ids(target_ids.long())
-        supervision_embeddings = self._maybe_l2_norm(
-            self.encoder.get_item_embeddings(shifted_targets)
-        )
-        negative_ids = self._sample_negative_ids(shifted_targets)
-        negative_embeddings = self._maybe_l2_norm(
-            self.encoder.get_item_embeddings(negative_ids)
-        )
+        if logits.shape != labels.shape:
+            raise ValueError(
+                f"logits shape {tuple(logits.shape)} must match "
+                f"labels shape {tuple(labels.shape)}"
+            )
+        if logits.shape[1] == 1:
+            return F.binary_cross_entropy_with_logits(logits[:, 0], labels[:, 0])
+        if logits.shape[1] == 2:
+            loss_e = F.binary_cross_entropy_with_logits(logits[:, 0], labels[:, 0])
+            loss_c = F.binary_cross_entropy_with_logits(logits[:, 1], labels[:, 1])
+            return 0.5 * (loss_e + loss_c)
+        return F.binary_cross_entropy_with_logits(logits, labels)
 
-        positive_logits = torch.sum(
-            output_embeddings * supervision_embeddings,
-            dim=-1,
-            keepdim=True,
-        )
-        negative_logits = torch.sum(
-            output_embeddings.unsqueeze(1) * negative_embeddings,
-            dim=-1,
-        )
-        negative_logits = torch.where(
-            negative_ids == shifted_targets.unsqueeze(1),
-            torch.full_like(negative_logits, -5e4),
-            negative_logits,
-        )
-
-        logits = torch.cat([positive_logits, negative_logits], dim=1)
-        logits = logits / self.softmax_temperature
-        labels = torch.zeros(
-            logits.shape[0],
-            dtype=torch.long,
-            device=logits.device,
-        )
-        return F.cross_entropy(logits, labels)
-
-    def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def predict_logits(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
         flat_outputs, _, _ = self.encoder(
             token_ids=batch["token_ids"],
             token_types=batch["token_types"],
@@ -429,9 +424,13 @@ class TypedHSTUModel(nn.Module):
             token_timestamps=batch.get("token_timestamps"),
         )
         output_embeddings = flat_outputs[batch["supervision_token_positions"].long()]
-        return self.compute_loss(
-            output_embeddings=output_embeddings,
-            target_ids=batch["targets"],
+        return self.prediction_head(output_embeddings)
+
+    def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+        logits = self.predict_logits(batch)
+        return self.compute_multitask_loss(
+            logits=logits,
+            labels=batch["labels"].float(),
         )
 
     @torch.inference_mode()

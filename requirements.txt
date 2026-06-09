@@ -4,6 +4,7 @@ scipy
 torch
 tqdm
 matplotlib
+mmh3
 numba
 requests
 pyarrow
