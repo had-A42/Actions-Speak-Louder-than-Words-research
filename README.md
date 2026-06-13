@@ -1,5 +1,9 @@
 # Actions Speak Louder than Words Research
 
+### Results
+1. [Paper](https://drive.google.com/file/d/1_dl-gKZmrAb5cqS0rbO8qVesWowdZj10/view?usp=sharing)
+2. [Presentation](https://drive.google.com/file/d/1lChNyqQMEk1bULZsGgo7vutS4ml_rJdC/view?usp=sharing)
+
 This repository contains experiments with neural recommender models for sequential user actions. The main source code is in `src/`, and all experiments are run from Jupyter notebooks.
 
 ## Project Structure
